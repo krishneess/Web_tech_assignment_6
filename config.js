@@ -2,20 +2,30 @@
 require("dotenv").config();
 const mongoose = require("mongoose");
 
+let connectionPromise = null;
+
 const connectDB = async () => {
-    try {
-        const mongoURI = process.env.MONGODB_URI;
+    const mongoURI = process.env.MONGODB_URI;
 
-        if (!mongoURI) {
-            throw new Error("MONGODB_URI is missing");
-        }
-
-        await mongoose.connect(mongoURI);
-        console.log("MongoDB Atlas connected successfully");
-    } catch (error) {
-        console.error("MongoDB connection failed:", error.message);
-        throw error;
+    if (!mongoURI) {
+        throw new Error("MONGODB_URI is missing");
     }
+
+    if (mongoose.connection.readyState === 1) {
+        return mongoose;
+    }
+
+    if (!connectionPromise) {
+        connectionPromise = mongoose.connect(mongoURI, {
+            serverSelectionTimeoutMS: 10000,
+            maxPoolSize: 5
+        }).catch((error) => {
+            connectionPromise = null;
+            throw error;
+        });
+    }
+
+    return connectionPromise;
 };
 
 module.exports = connectDB;

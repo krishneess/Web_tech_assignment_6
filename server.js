@@ -10,6 +10,19 @@ const Blog = require('./blogSchema');
 
 app.use(express.json());
 
+// Connect to MongoDB before handling API requests
+app.use(async (req, res, next) => {
+    try {
+        await connectDB();
+        next();
+    } catch (err) {
+        console.error("MongoDB connection failed:", err.message);
+        res.status(503).json({
+            message: "Database connection unavailable"
+        });
+    }
+});
+
 // CREATE a blog
 app.post('/api/blogs', async (req, res) => {
     try {
@@ -95,16 +108,14 @@ app.delete('/api/blogs/:id', async (req, res) => {
 // Start server after database connection
 const PORT = process.env.PORT || 5000;
 
-const startServer = async () => {
-    try {
-        await connectDB();
-        app.listen(PORT, () => {
-            console.log(`Server running on port ${PORT}`);
-        });
-    } catch (err) {
-        console.error('Failed to start server:', err.message);
-        process.exit(1);
-    }
-};
+// Export the Express app for Vercel
+module.exports = app;
 
-startServer();
+// Start a local server when running on your computer
+if (require.main === module) {
+    const PORT = process.env.PORT || 5000;
+
+    app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+    });
+}
